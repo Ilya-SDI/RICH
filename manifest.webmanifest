@@ -1,9 +1,35 @@
 {
-  "name": "RICH CRAFT",
+  "name": "RICH CRAFT — Родион",
   "short_name": "RICH CRAFT",
+  "description": "Ежедневная прокачка Родиона",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#202428",
   "theme_color": "#202428",
-  "description": "Ежедневная система развития Родиона"
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

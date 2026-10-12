@@ -1,107 +1,20 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#202428">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css">
-<title>RICH CRAFT</title>
-</head>
-<body>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#202428"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="RICH CRAFT"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"><link rel="icon" href="./icons/icon-192.png"><link rel="stylesheet" href="./styles.css"><title>RICH CRAFT</title></head><body>
+<div id="splash" class="splash"><img src="./icons/icon-192.png"><b>RICH CRAFT</b><span>LEVEL UP</span></div>
 <div class="app">
-<header>
-  <div class="brand">RICH CRAFT</div>
-  <div class="tag">Свобода во времени. Ответственность за результат.</div><div id="cloudStatus" class="cloud-status">☁ подключение журнала…</div>
-  <div class="weekline"><b id="weekScore">0/28</b><div class="bar"><span id="weekBar"></span></div><b id="xp">0 XP</b></div>
-</header>
-
-<nav class="days" id="days"></nav>
-
-<div class="dev-strip" id="devStrip">
-  <div class="left">
-    <div class="kicker">РАЗВИТИЕ · СЕГОДНЯ</div>
-    <div class="name" id="devName">Загрузка...</div>
-    <div class="mini" id="devMeta"></div>
-  </div>
-  <div class="go" id="devGo">ОТКРЫТЬ</div>
+<header><div class="brand">RICH CRAFT</div><div class="tag">РОДИОН · LEVEL UP</div><button id="installBtn" class="install" hidden>⬇</button><div class="xp"><b id="lvl">LVL 1</b><div><span id="xpbar"></span></div><b id="xp">0 XP</b></div><div id="cloudStatus" class="cloud-status">☁ журнал не подключён — нажми сюда</div></header>
+<section id="today" class="screen active"><main>
+<div class="hero"><small>СЕГОДНЯ</small><div class="heroRow"><div><h1 id="todayTitle">ПОНЕДЕЛЬНИК</h1><p id="todayDate"></p></div><div class="score"><b id="dayScore">0/4</b><span>готово</span></div></div><div class="bar"><span id="dayBar"></span></div><em>Время выбираешь сам. Результат — до конца дня.</em></div>
+<div class="tiles"><button data-jump="school">📚<b>УРОКИ</b><small id="tschool">не сделано</small></button><button data-jump="trumpet">🎺<b>ТРУБА</b><small id="ttrumpet">не сделано</small></button><button data-jump="home">🏠<b>ДОМ</b><small id="thome">не сделано</small></button><button id="devTile" class="dev">🧠<b>РАЗВИТИЕ</b><small id="tdev">не сделано</small></button></div>
+<div id="devFeature" class="devFeature"><small>ТРЕНИРОВКА РАЗВИТИЯ</small><h2 id="devName"></h2><p id="devMeta"></p><button id="startDev">▶ НАЧАТЬ ТРЕНИРОВКУ</button></div>
+<div class="quest" id="qSchool"><div><b>📚 УРОКИ</b><span id="stSchool">0/1</span></div><p>Что сегодня довёл до конца?</p><textarea id="txtSchool" placeholder="Алгебра — ..., русский — ..."></textarea><button data-complete="school">ГОТОВО</button></div>
+<div class="quest" id="qTrumpet"><div><b>🎺 ТРУБА</b><span id="stTrumpet">0/1</span></div><p>Что тренировал, сколько минут, что стало лучше?</p><textarea id="txtTrumpet" placeholder="Гаммы / пьеса / минуты / результат"></textarea><button data-complete="trumpet">ТРЕНИРОВКА СДЕЛАНА</button></div>
+<div class="quest" id="qHome"><div><b>🏠 ПОМОЩЬ ПО ДОМУ</b><span id="stHome">0/1</span></div><p>Сам выбери полезное дело.</p><textarea id="txtHome" placeholder="Сегодня я..."></textarea><button data-complete="home">СДЕЛАНО</button></div>
+<div class="rule"><small>ПРАВИЛО МЕСЯЦА</small><b>ПОНЯЛ → ПРОВЕРИЛ → ОТВЕТИЛ</b></div>
+</main></section>
+<section id="week" class="screen"><main><div class="panel"><h2>НЕДЕЛЯ</h2><div id="days" class="days"></div><div id="weekStats"></div></div><div class="panel"><div class="weekTotal"><b id="weekScore">0/28</b><span>закрыто блоков</span></div><div class="bar"><span id="weekBar"></span></div><button id="copyDay" class="secondary">СКОПИРОВАТЬ ОТЧЁТ ДНЯ</button><button id="exportAll" class="secondary">ЭКСПОРТ ПРОГРЕССА</button><div id="notice"></div></div></main></section>
+<section id="trophiesScreen" class="screen"><main><div class="panel"><h2>ДОСТИЖЕНИЯ</h2><div id="trophies" class="trophies"></div></div><div class="panel"><h2>ЦЕЛЬ</h2><p class="body">Каждый день самому организовать четыре результата и постепенно стать сильнее в мышлении, самостоятельности и умении доводить до конца.</p></div></main></section>
+<nav><button class="active" data-screen="today">⬛<b>Сегодня</b></button><button data-screen="week">▦<b>Неделя</b></button><button data-screen="trophiesScreen">🏆<b>Трофеи</b></button></nav>
 </div>
-
-<main>
-  <section class="card hero">
-    <div>
-      <div class="today" id="todayTitle">ПОНЕДЕЛЬНИК</div>
-      <div class="meta">Когда выполнять — выбираешь сам. До конца дня закрыть 4 блока.</div>
-    </div>
-    <div class="scoregrid">
-      <div class="score"><b id="sSchool">0</b>УРОКИ</div>
-      <div class="score"><b id="sTrumpet">0</b>ТРУБА</div>
-      <div class="score"><b id="sHome">0</b>ДОМ</div>
-      <div class="score"><b id="sDev">0</b>РАЗВИТИЕ</div>
-    </div>
-  </section>
-
-  <section class="quest" id="qSchool">
-    <div class="quest-top"><div class="quest-title">📚 УРОКИ</div><div id="stSchool" class="status">0/1</div></div>
-    <div class="meta">Напиши, что сегодня реально довёл до конца.</div>
-    <textarea id="txtSchool" placeholder="Алгебра — ..., русский — ..., история — ..."></textarea>
-    <button class="primary" data-complete="school">ГОТОВО</button>
-  </section>
-
-  <section class="quest" id="qTrumpet">
-    <div class="quest-top"><div class="quest-title">🎺 ТРУБА</div><div id="stTrumpet" class="status">0/1</div></div>
-    <div class="meta">Каждый день. Что тренировал, сколько минут, что стало лучше?</div>
-    <textarea id="txtTrumpet" placeholder="Гаммы / пьеса / сложный фрагмент / минуты / результат"></textarea>
-    <button class="primary" data-complete="trumpet">ТРЕНИРОВКА СДЕЛАНА</button>
-  </section>
-
-  <section class="quest" id="qHome">
-    <div class="quest-top"><div class="quest-title">🏠 ПОМОЩЬ ПО ДОМУ</div><div id="stHome" class="status">0/1</div></div>
-    <div class="meta">Сам выбери полезное дело и напиши, что сделал.</div>
-    <textarea id="txtHome" placeholder="Сегодня я..."></textarea>
-    <button class="primary" data-complete="home">СДЕЛАНО</button>
-  </section>
-
-  <section class="card rule-card">
-    <div class="title">ПРАВИЛО МЕСЯЦА</div>
-    <div class="rule">ПОНЯЛ → ПРОВЕРИЛ → ОТВЕТИЛ</div>
-    <div class="meta">Перед ответом: «Какое условие я ещё не проверил?»</div>
-  </section>
-
-  <section class="card">
-    <div class="title">ПРОГРЕСС НЕДЕЛИ</div>
-    <div id="weekStats"></div>
-  </section>
-
-  <button class="gold smallbtn" id="copyDay">СКОПИРОВАТЬ ОТЧЁТ ЗА ДЕНЬ</button>
-  <button class="blue smallbtn" id="exportAll">ЭКСПОРТ ВСЕГО ПРОГРЕССА</button>
-  <div id="notice" class="notice"></div>
-</main>
-
-<footer>RICH CRAFT v1.0 · данные сохраняются на этом устройстве</footer>
-</div>
-
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="mini">RICH CRAFT · РАЗВИТИЕ</div>
-        <div class="title" id="modalTitle">Тренировка</div>
-        <div class="mini" id="timerText">00:00</div>
-      </div>
-      <button class="x" id="closeModal">✕</button>
-    </div>
-    <div class="modal-body" id="devBody"></div>
-  </div>
-</div>
-
-<script src="curriculum.js"></script>
-<script src="cloud.js"></script>
-<script src="app.js"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
-</script>
-</body>
-</html>
+<div id="modalBg" class="modalBg"><div class="modal"><div class="modalHead"><div><small>RICH CRAFT · РАЗВИТИЕ</small><h3 id="modalTitle"></h3><span id="timerText">00:00</span></div><button id="closeModal">✕</button></div><div id="devBody" class="modalBody"></div></div></div>
+<div id="installSheet" class="installSheet" hidden><div><img src="./icons/icon-192.png"><b>Установить RICH CRAFT</b><p>Будет запускаться как отдельное приложение.</p><button id="installNow">УСТАНОВИТЬ</button><button id="installLater" class="secondary">позже</button></div></div>
+<script src="./curriculum.js"></script><script src="./cloud.js"></script><script src="./app.js"></script></body></html>

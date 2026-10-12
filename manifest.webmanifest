@@ -1,0 +1,9 @@
+{
+  "name": "RICH CRAFT",
+  "short_name": "RICH CRAFT",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#202428",
+  "theme_color": "#202428",
+  "description": "Ежедневная система развития Родиона"
+}

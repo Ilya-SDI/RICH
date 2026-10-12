@@ -1,17 +1,21 @@
 window.RICH_CLOUD = (() => {
-  const URL = "https://ukrgjdbhbokfkpfpqmnb.supabase.co";
-  const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrcmdqZGJoYm9rZmtwZnBxbW5iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NjcwNDYsImV4cCI6MjEwNzA0MzA0Nn0.-ap4_H6uBidtmiUiUax8y0eJPb7iXbh9tQyG3-NruAU";
+  const EDGE_URL = "https://ukrgjdbhbokfkpfpqmnb.supabase.co/functions/v1/rich-craft-sync";
   const JOURNAL_ID = "rc_rodion_59da7a3cfbf30e70b30aa3dc";
-  const QUEUE_KEY = 'richCraftCloudQueueV1';
+  const QUEUE_KEY = 'richCraftSecureQueueV1';
+  const TOKEN_KEY = 'richCraftDeviceTokenV1';
   const INSTALL_KEY = 'richCraftInstallIdV1';
 
   function installId() {
     let id = localStorage.getItem(INSTALL_KEY);
     if (!id) {
-      id = (crypto.randomUUID ? crypto.randomUUID() : 'install-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+      id = crypto.randomUUID ? crypto.randomUUID() : 'install-' + Date.now() + '-' + Math.random().toString(16).slice(2);
       localStorage.setItem(INSTALL_KEY, id);
     }
     return id;
+  }
+
+  function token() {
+    return localStorage.getItem(TOKEN_KEY) || '';
   }
 
   function setStatus(text, ok=true) {
@@ -34,40 +38,110 @@ window.RICH_CLOUD = (() => {
     return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
+  async function connect() {
+    const current = token();
+    const entered = prompt(
+      current
+        ? 'Облачный журнал уже подключён. Введи новый ключ только если хочешь заменить его:'
+        : 'Введи ключ RICH CRAFT для этого телефона:'
+    );
+    if (entered === null) return false;
+    const clean = entered.trim();
+    if (clean.length < 30) {
+      alert('Ключ слишком короткий.');
+      return false;
+    }
+    localStorage.setItem(TOKEN_KEY, clean);
+    setStatus('☁ проверяю ключ…', true);
+    const ok = await ping();
+    if (!ok) {
+      localStorage.removeItem(TOKEN_KEY);
+      setStatus('☁ ключ не принят — нажми сюда', false);
+      alert('Ключ не принят. Проверь символы.');
+      return false;
+    }
+    setStatus('☁ журнал подключён', true);
+    await flush();
+    return true;
+  }
+
   async function post(event) {
-    const res = await fetch(URL + '/rest/v1/rich_craft_events', {
+    const t = token();
+    if (!t) throw new Error('missing_token');
+
+    const res = await fetch(EDGE_URL, {
       method: 'POST',
       headers: {
-        'apikey': KEY,
-        'Authorization': 'Bearer ' + KEY,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'x-rich-device-token': t
       },
       body: JSON.stringify(event)
     });
-    if (!res.ok && res.status !== 409) {
-      const t = await res.text().catch(()=> '');
-      throw new Error('cloud ' + res.status + ' ' + t);
+
+    let payload = {};
+    try { payload = await res.json(); } catch {}
+
+    if (res.status === 401) throw new Error('unauthorized');
+    if (!res.ok) throw new Error(payload.error || ('cloud_' + res.status));
+    return payload;
+  }
+
+  async function ping() {
+    const event = {
+      journal_id: JOURNAL_ID,
+      client_event_id: JOURNAL_ID + '-ping-' + makeId(),
+      event_date: new Date().toISOString().slice(0,10),
+      category: 'system',
+      title: 'Device connected',
+      text_value: 'Secure device connection',
+      details: { install_id: installId(), kind: 'device_connect' },
+      client_created_at: new Date().toISOString()
+    };
+    try {
+      await post(event);
+      return true;
+    } catch {
+      return false;
     }
   }
 
   async function flush() {
+    if (!token()) {
+      setStatus('☁ журнал не подключён — нажми сюда', false);
+      return false;
+    }
+
     let q = queue();
     if (!q.length) {
       setStatus('☁ журнал синхронизирован', true);
       return true;
     }
+
     setStatus('☁ отправка…', true);
     const rest = [];
+
     for (const e of q) {
-      try { await post(e); }
-      catch (err) { rest.push(e); }
+      try {
+        await post(e);
+      } catch (err) {
+        if (String(err?.message || err) === 'unauthorized') {
+          localStorage.removeItem(TOKEN_KEY);
+          rest.push(e);
+          saveQueue(rest.concat(q.slice(q.indexOf(e)+1)));
+          setStatus('☁ ключ нужно ввести заново', false);
+          return false;
+        }
+        rest.push(e);
+      }
     }
+
     saveQueue(rest);
+
     if (rest.length) {
       setStatus('☁ в очереди: ' + rest.length, false);
       return false;
     }
+
     setStatus('☁ журнал синхронизирован', true);
     return true;
   }
@@ -87,17 +161,34 @@ window.RICH_CLOUD = (() => {
       max_score: payload.max_score ?? null,
       seconds: payload.seconds ?? null,
       confidence: payload.confidence ?? null,
-      details: Object.assign({install_id: installId()}, payload.details || {}),
+      details: Object.assign({ install_id: installId() }, payload.details || {}),
       client_created_at: new Date().toISOString()
     };
+
     const q = queue();
     q.push(event);
     saveQueue(q);
-    await flush();
+    return flush();
+  }
+
+  function init() {
+    const el = document.getElementById('cloudStatus');
+    if (el) {
+      el.onclick = connect;
+      el.style.cursor = 'pointer';
+    }
+    if (!token()) setStatus('☁ журнал не подключён — нажми сюда', false);
+    else setTimeout(flush, 500);
   }
 
   window.addEventListener('online', flush);
-  setTimeout(flush, 700);
+  window.addEventListener('load', init);
 
-  return { log, flush, journalId: JOURNAL_ID };
+  return {
+    log,
+    flush,
+    connect,
+    journalId: JOURNAL_ID,
+    isConnected: () => !!token()
+  };
 })();

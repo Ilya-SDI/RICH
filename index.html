@@ -1,4 +1,4 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#202428"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="RICH CRAFT"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./apple-touch-icon.png"><link rel="icon" href="./icon-192.png"><link rel="stylesheet" href="./styles.css?v=22"><title>RICH CRAFT</title></head><body>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#202428"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="RICH CRAFT"><link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./apple-touch-icon.png"><link rel="icon" href="./icon-192.png"><link rel="stylesheet" href="./styles.css?v=23"><title>RICH CRAFT</title></head><body>
 <div id="splash" class="splash"><img src="./icon-192.png"><b>RICH CRAFT</b><span>LEVEL UP</span></div>
 <div class="app">
 <header><div class="brand">RICH CRAFT</div><div class="tag">РОДИОН · LEVEL UP</div><div class="xp"><b id="lvl">LVL 1</b><div><span id="xpbar"></span></div><b id="xp">0 XP</b></div><div id="cloudStatus" class="cloud-status">☁ журнал не подключён — нажми сюда</div></header>
@@ -12,8 +12,20 @@
 <div class="rule"><small>ПРАВИЛО МЕСЯЦА</small><b>ПОНЯЛ → ПРОВЕРИЛ → ОТВЕТИЛ</b></div>
 </main></section>
 <section id="week" class="screen"><main><div class="panel"><h2>НЕДЕЛЯ</h2><div id="days" class="days"></div><div id="weekStats"></div></div><div class="panel"><div class="weekTotal"><b id="weekScore">0/28</b><span>закрыто блоков</span></div><div class="bar"><span id="weekBar"></span></div><button id="copyDay" class="secondary">СКОПИРОВАТЬ ОТЧЁТ ДНЯ</button><button id="exportAll" class="secondary">ЭКСПОРТ ПРОГРЕССА</button><div id="notice"></div></div></main></section>
+<section id="gradesScreen" class="screen"><main>
+<div class="panel gradesHead"><small>ШКОЛА · БЕЗ ЭМОЦИЙ</small><h2>РАЗБОР ДВОЕК</h2><p class="body">Не прячем проблему и не ругаем себя. Разбираем: <b>что произошло → почему → что нужно сделать → срок.</b></p><div class="gradeCounters"><div><b id="gradesOpen">0</b><small>в работе</small></div><div><b id="gradesClosed">0</b><small>исправлено</small></div></div></div>
+<div class="panel gradeFormPanel"><h3 id="gradeFormTitle">РАЗОБРАТЬ ДВОЙКУ</h3><form id="gradeForm">
+<label>ПРЕДМЕТ<input id="gradeSubject" maxlength="40" placeholder="Например: алгебра" required></label>
+<label>ЗА ЧТО ПОЛУЧИЛ?<textarea id="gradeWhat" maxlength="300" placeholder="Контрольная / не сделал ДЗ / не выучил правило..." required></textarea></label>
+<label>ПОЧЕМУ ТАК ВЫШЛО?<textarea id="gradeWhy" maxlength="400" placeholder="Не понял тему / забыл / торопился / не подготовился..." required></textarea></label>
+<label>ЧТО НУЖНО СДЕЛАТЬ?<textarea id="gradePlan" maxlength="500" placeholder="Разобрать тему, сделать работу, подойти к учителю..." required></textarea></label>
+<div class="gradeGrid"><label>ИСПРАВЛЯЕТСЯ?<select id="gradeCanFix"><option value="unknown">нужно уточнить</option><option value="yes">да</option><option value="no">нет</option></select></label><label>СРОК<input id="gradeDeadline" type="date"></label></div>
+<button id="gradeSubmit" type="submit">ДОБАВИТЬ В РАЗБОР</button><button id="gradeCancel" type="button" class="secondary" hidden>ОТМЕНА</button>
+</form></div>
+<div id="gradesList"></div>
+</main></section>
 <section id="trophiesScreen" class="screen"><main><div class="panel"><h2>ДОСТИЖЕНИЯ</h2><div id="trophies" class="trophies"></div></div><div class="panel"><h2>ЦЕЛЬ</h2><p class="body">Каждый день самому организовать четыре результата и постепенно стать сильнее в мышлении, самостоятельности и умении доводить до конца.</p></div></main></section>
-<nav><button class="active" data-screen="today">⬛<b>Сегодня</b></button><button data-screen="week">▦<b>Неделя</b></button><button data-screen="trophiesScreen">🏆<b>Трофеи</b></button></nav>
+<nav><button class="active" data-screen="today">⬛<b>Сегодня</b></button><button data-screen="week">▦<b>Неделя</b></button><button data-screen="gradesScreen">🛠️<b>Двойки</b></button><button data-screen="trophiesScreen">🏆<b>Трофеи</b></button></nav>
 </div>
 <div id="modalBg" class="modalBg"><div class="modal"><div class="modalHead"><div><small>RICH CRAFT · РАЗВИТИЕ</small><h3 id="modalTitle"></h3><span id="timerText">00:00</span></div><button id="closeModal">✕</button></div><div id="devBody" class="modalBody"></div></div></div>
-<script src="./curriculum.js"></script><script src="./cloud.js"></script><script src="./app.js?v=22"></script></body></html>
+<script src="./curriculum.js"></script><script src="./cloud.js"></script><script src="./grades.js?v=23"></script><script src="./app.js?v=22"></script></body></html>

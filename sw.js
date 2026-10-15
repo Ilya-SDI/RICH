@@ -1,11 +1,12 @@
-const CACHE='rich-craft-v2-2-noprompt-20261012';
+const CACHE='rich-craft-v2-3-grades-20261015';
 const ASSETS=[
 './',
 './index.html',
-'./styles.css?v=22',
+'./styles.css?v=23',
 './app.js?v=22',
 './curriculum.js',
 './cloud.js',
+'./grades.js?v=23',
 './manifest.webmanifest',
 './icon-192.png',
 './icon-512.png',

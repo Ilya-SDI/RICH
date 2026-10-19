@@ -98,6 +98,7 @@ window.RICH_PUSH = (() => {
       e.card.hidden=true;
       return;
     }
+    e.card.hidden=false;
     e.button.onclick=enable;
     if(!('Notification' in window) || !('PushManager' in window)){
       setStatus('не поддерживается');

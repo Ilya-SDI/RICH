@@ -41,19 +41,28 @@ window.RICH_PUSH = (() => {
 
   async function readyWorker(){
     if(!('serviceWorker' in navigator))throw new Error('service_worker_unsupported');
+    let reg=null;
     try{
-      await navigator.serviceWorker.register('./sw.js?v=26',{updateViaCache:'none'});
+      reg=await timeout(navigator.serviceWorker.getRegistration(),4000,'service_worker_lookup_timeout');
+      if(!reg){
+        reg=await timeout(
+          navigator.serviceWorker.register('./sw.js?v=27',{updateViaCache:'none'}),
+          8000,
+          'service_worker_register_timeout'
+        );
+      }
+      if(reg?.active)return reg;
+      return await timeout(navigator.serviceWorker.ready,8000,'service_worker_ready_timeout');
     }catch(e){
-      console.error('SW register failed',e);
-      throw new Error('service_worker_register_failed');
+      console.error('SW ready failed',e);
+      throw e;
     }
-    return await timeout(navigator.serviceWorker.ready,8000,'service_worker_timeout');
   }
 
   async function getSub(){
     if(!('PushManager' in window))return null;
     const reg=await readyWorker();
-    return await reg.pushManager.getSubscription();
+    return await timeout(reg.pushManager.getSubscription(),5000,'push_get_subscription_timeout');
   }
 
   async function syncSub(sub){
@@ -76,7 +85,6 @@ window.RICH_PUSH = (() => {
   async function enable(){
     const e=els();
     if(!e.button || e.button.disabled)return;
-    setStatus('подключаю…',false,true);
     try{
       if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
         setStatus('уведомления не поддерживаются');
@@ -90,22 +98,30 @@ window.RICH_PUSH = (() => {
         return;
       }
 
+      setStatus('проверяю разрешение…',false,true);
       let permission=Notification.permission;
-      if(permission==='default')permission=await Notification.requestPermission();
+      if(permission==='default'){
+        permission=await timeout(Notification.requestPermission(),12000,'permission_timeout');
+      }
       if(permission!=='granted'){
         setStatus(permission==='denied'?'уведомления запрещены в Android':'разрешение не дано');
         alert('Нужно разрешить уведомления для RICH CRAFT в настройках телефона.');
         return;
       }
 
+      setStatus('готовлю уведомления…',false,true);
       const reg=await readyWorker();
-      let sub=await reg.pushManager.getSubscription();
+
+      setStatus('создаю подписку…',false,true);
+      let sub=await timeout(reg.pushManager.getSubscription(),5000,'push_get_subscription_timeout');
       if(!sub){
         sub=await timeout(reg.pushManager.subscribe({
           userVisibleOnly:true,
           applicationServerKey:b64ToUint8Array(PUBLIC_KEY)
-        }),10000,'push_subscribe_timeout');
+        }),12000,'push_subscribe_timeout');
       }
+
+      setStatus('сохраняю подписку…',false,true);
       await syncSub(sub);
       setStatus('каждый день в 15:00',true);
       await reg.showNotification('RICH CRAFT',{
@@ -117,11 +133,13 @@ window.RICH_PUSH = (() => {
     }catch(err){
       console.error('RICH PUSH ERROR',err);
       const code=String(err?.message||err);
-      if(code.includes('service_worker'))setStatus('перезапусти приложение и попробуй ещё раз');
+      if(code.includes('permission_timeout'))setStatus('Android не открыл запрос разрешения');
+      else if(code.includes('service_worker'))setStatus('не удалось запустить службу уведомлений');
+      else if(code.includes('push_get_subscription'))setStatus('не удалось проверить push-подписку');
       else if(code.includes('push_subscribe'))setStatus('Android не дал создать push-подписку');
       else if(code.includes('subscribe_failed')||code.includes('subscribe_timeout'))setStatus('не удалось связаться с сервером');
       else setStatus('не удалось включить');
-      alert('Не получилось включить уведомления. Статус под кнопкой подскажет причину.');
+      alert('Не получилось включить уведомления. Посмотри текст под «НАПОМИНАНИЕ · 15:00» — там теперь указана точная стадия ошибки.');
     }
   }
 
@@ -136,10 +154,6 @@ window.RICH_PUSH = (() => {
     e.card.hidden=false;
     e.button.type='button';
     e.button.onclick=enable;
-    e.button.addEventListener('touchend',ev=>{
-      ev.preventDefault();
-      enable();
-    },{passive:false});
 
     if(!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)){
       setStatus('не поддерживается');

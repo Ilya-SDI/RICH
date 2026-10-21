@@ -1,4 +1,4 @@
-const CACHE='rich-craft-v2-7-push-diagnostics-20261021';
+const CACHE='rich-craft-v2-8-push-v28-20261021';
 const ASSETS=[
 './',
 './index.html',
@@ -10,7 +10,7 @@ const ASSETS=[
 './cloud.js',
 './grades.js?v=23',
 './notes.js?v=24',
-'./push.js?v=26',
+'./push.js?v=28',
 './manifest.webmanifest',
 './icon-192.png',
 './icon-512.png',

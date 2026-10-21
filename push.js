@@ -21,18 +21,38 @@ window.RICH_PUSH = (() => {
     };
   }
 
-  function setStatus(text, enabled=false){
+  function setStatus(text, enabled=false, busy=false){
     const e=els();
     if(!e.status)return;
     e.status.textContent=text;
     e.card?.classList.toggle('enabled',enabled);
-    if(e.button)e.button.textContent=enabled?'ВКЛЮЧЕНО':'ВКЛЮЧИТЬ';
-    if(e.button)e.button.disabled=enabled;
+    if(e.button){
+      e.button.textContent=enabled?'ВКЛЮЧЕНО':busy?'ПОДОЖДИ…':'ВКЛЮЧИТЬ';
+      e.button.disabled=enabled||busy;
+    }
+  }
+
+  function timeout(promise,ms,message){
+    return Promise.race([
+      promise,
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error(message||'timeout')),ms))
+    ]);
+  }
+
+  async function readyWorker(){
+    if(!('serviceWorker' in navigator))throw new Error('service_worker_unsupported');
+    try{
+      await navigator.serviceWorker.register('./sw.js?v=26',{updateViaCache:'none'});
+    }catch(e){
+      console.error('SW register failed',e);
+      throw new Error('service_worker_register_failed');
+    }
+    return await timeout(navigator.serviceWorker.ready,8000,'service_worker_timeout');
   }
 
   async function getSub(){
-    if(!('serviceWorker' in navigator) || !('PushManager' in window))return null;
-    const reg=await navigator.serviceWorker.ready;
+    if(!('PushManager' in window))return null;
+    const reg=await readyWorker();
     return await reg.pushManager.getSubscription();
   }
 
@@ -41,37 +61,50 @@ window.RICH_PUSH = (() => {
     const installId=localStorage.getItem(INSTALL_KEY)||'';
     if(!token || !installId)throw new Error('missing_cloud');
 
-    const r=await fetch(SUBSCRIBE_URL,{
+    const r=await timeout(fetch(SUBSCRIBE_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-rich-device-token':token},
       body:JSON.stringify({journal_id:JOURNAL_ID,install_id:installId,subscription:sub.toJSON()})
-    });
-    if(!r.ok)throw new Error('subscribe_failed');
+    }),10000,'subscribe_timeout');
+    if(!r.ok){
+      let body='';
+      try{body=await r.text();}catch{}
+      throw new Error('subscribe_failed_'+r.status+(body?':'+body:''));
+    }
   }
 
   async function enable(){
     const e=els();
-    if(e.button)e.button.disabled=true;
+    if(!e.button || e.button.disabled)return;
+    setStatus('подключаю…',false,true);
     try{
       if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
         setStatus('уведомления не поддерживаются');
+        alert('Этот браузер не поддерживает push-уведомления. Открой RICH CRAFT через Chrome и добавь на главный экран.');
         return;
       }
       const token=localStorage.getItem(TOKEN_KEY)||'';
       if(!token){
         setStatus('сначала подключи облачный журнал');
-        alert('Сначала подключи облачный журнал RICH CRAFT.');
+        alert('Сначала нажми на строку облачного журнала сверху и подключи RICH CRAFT.');
         return;
       }
-      const permission=await Notification.requestPermission();
+
+      let permission=Notification.permission;
+      if(permission==='default')permission=await Notification.requestPermission();
       if(permission!=='granted'){
-        setStatus('разрешение не дано');
+        setStatus(permission==='denied'?'уведомления запрещены в Android':'разрешение не дано');
+        alert('Нужно разрешить уведомления для RICH CRAFT в настройках телефона.');
         return;
       }
-      const reg=await navigator.serviceWorker.ready;
+
+      const reg=await readyWorker();
       let sub=await reg.pushManager.getSubscription();
       if(!sub){
-        sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToUint8Array(PUBLIC_KEY)});
+        sub=await timeout(reg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:b64ToUint8Array(PUBLIC_KEY)
+        }),10000,'push_subscribe_timeout');
       }
       await syncSub(sub);
       setStatus('каждый день в 15:00',true);
@@ -82,25 +115,33 @@ window.RICH_PUSH = (() => {
         tag:'rich-craft-push-enabled'
       });
     }catch(err){
-      console.error(err);
-      setStatus('не удалось включить');
-      alert('Не получилось включить уведомления. Открой RICH CRAFT ещё раз и попробуй снова.');
-    }finally{
-      if(e.button && !e.card?.classList.contains('enabled'))e.button.disabled=false;
+      console.error('RICH PUSH ERROR',err);
+      const code=String(err?.message||err);
+      if(code.includes('service_worker'))setStatus('перезапусти приложение и попробуй ещё раз');
+      else if(code.includes('push_subscribe'))setStatus('Android не дал создать push-подписку');
+      else if(code.includes('subscribe_failed')||code.includes('subscribe_timeout'))setStatus('не удалось связаться с сервером');
+      else setStatus('не удалось включить');
+      alert('Не получилось включить уведомления. Статус под кнопкой подскажет причину.');
     }
   }
 
   async function init(){
     const e=els();
-    if(!e.card)return;
+    if(!e.card || !e.button)return;
     const installId=localStorage.getItem(INSTALL_KEY)||'';
     if(installId && installId!==TARGET_INSTALL_ID){
       e.card.hidden=true;
       return;
     }
     e.card.hidden=false;
+    e.button.type='button';
     e.button.onclick=enable;
-    if(!('Notification' in window) || !('PushManager' in window)){
+    e.button.addEventListener('touchend',ev=>{
+      ev.preventDefault();
+      enable();
+    },{passive:false});
+
+    if(!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)){
       setStatus('не поддерживается');
       return;
     }
@@ -109,14 +150,15 @@ window.RICH_PUSH = (() => {
       return;
     }
     if(Notification.permission==='granted'){
-      const sub=await getSub();
-      if(sub){
-        try{await syncSub(sub);setStatus('каждый день в 15:00',true);return;}catch{}
-      }
+      try{
+        const sub=await getSub();
+        if(sub){await syncSub(sub);setStatus('каждый день в 15:00',true);return;}
+      }catch(err){console.warn('Push init retry later',err);}
     }
-    setStatus('выключено');
+    setStatus('нажми «ВКЛЮЧИТЬ»');
   }
 
-  window.addEventListener('load',()=>setTimeout(init,900));
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
   return {enable,init};
 })();

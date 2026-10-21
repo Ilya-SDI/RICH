@@ -1,5 +1,5 @@
 window.RICH_PUSH = (() => {
-  const VERSION = '28';
+  const VERSION = '29';
   const PUBLIC_KEY = 'BItkwnCtm_lRThx5EGX9n5vg24xw2eYdgcrJ3FiE1oF7MjhFVnoc84D6dUHZX5pKie_UdeI2llm6bTnv4Xpl8_Y';
   const SUBSCRIBE_URL = 'https://ukrgjdbhbokfkpfpqmnb.supabase.co/functions/v1/rich-craft-push-subscribe';
   const JOURNAL_ID = 'rc_rodion_59da7a3cfbf30e70b30aa3dc';
@@ -25,7 +25,7 @@ window.RICH_PUSH = (() => {
   function setStatus(text, enabled=false, busy=false){
     const e=els();
     if(!e.status)return;
-    e.status.textContent=text;
+    e.status.textContent=`${text} · v${VERSION}`;
     e.card?.classList.toggle('enabled',enabled);
     if(e.button){
       e.button.textContent=enabled?'ВКЛЮЧЕНО':busy?'ПОДОЖДИ…':'ВКЛЮЧИТЬ';
@@ -42,33 +42,20 @@ window.RICH_PUSH = (() => {
 
   async function readyWorker(){
     if(!('serviceWorker' in navigator))throw new Error('service_worker_unsupported');
-    try{
-      setStatus('обновляю службу уведомлений…',false,true);
-      const reg=await timeout(
-        navigator.serviceWorker.register('./sw.js?v='+VERSION,{updateViaCache:'none'}),
-        10000,
-        'service_worker_register_timeout'
-      );
+    let reg=await timeout(navigator.serviceWorker.getRegistration(),5000,'service_worker_lookup_timeout');
+    if(!reg){
+      reg=await timeout(navigator.serviceWorker.register('./sw.js?v='+VERSION,{updateViaCache:'none'}),8000,'service_worker_register_timeout');
+    } else {
       try{await timeout(reg.update(),6000,'service_worker_update_timeout');}catch{}
-      if(reg.active)return reg;
-      return await timeout(navigator.serviceWorker.ready,10000,'service_worker_ready_timeout');
-    }catch(e){
-      console.error('SW ready failed',e);
-      throw e;
     }
-  }
-
-  async function getSub(){
-    if(!('PushManager' in window))return null;
-    const reg=await readyWorker();
-    return await timeout(reg.pushManager.getSubscription(),6000,'push_get_subscription_timeout');
+    if(reg?.active)return reg;
+    return await timeout(navigator.serviceWorker.ready,8000,'service_worker_ready_timeout');
   }
 
   async function syncSub(sub){
     const token=localStorage.getItem(TOKEN_KEY)||'';
     const installId=localStorage.getItem(INSTALL_KEY)||'';
     if(!token || !installId)throw new Error('missing_cloud');
-
     const r=await timeout(fetch(SUBSCRIBE_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-rich-device-token':token},
@@ -81,62 +68,100 @@ window.RICH_PUSH = (() => {
     }
   }
 
+  async function finishSubscribe(reg){
+    setStatus('создаю push-подписку…',false,true);
+    let sub=await timeout(reg.pushManager.getSubscription(),6000,'push_get_subscription_timeout');
+    if(!sub){
+      sub=await timeout(reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:b64ToUint8Array(PUBLIC_KEY)
+      }),15000,'push_subscribe_timeout');
+    }
+    setStatus('сохраняю подписку…',false,true);
+    await syncSub(sub);
+    setStatus('каждый день в 15:00',true);
+    await reg.showNotification('RICH CRAFT',{
+      body:'Напоминание на 15:00 включено.',
+      icon:'./icon-192.png',
+      badge:'./icon-192.png',
+      tag:'rich-craft-push-enabled'
+    });
+  }
+
+  function showSiteSettingsHelp(){
+    setStatus('разреши уведомления для сайта');
+    alert('Chrome теперь может показывать разрешение на уведомления не отдельным окном, а через настройки сайта. Открой RICH CRAFT в Chrome → меню ⋮ → Настройки сайта / Разрешения → Уведомления → Разрешить. Потом вернись в RICH CRAFT — подписка включится автоматически.');
+  }
+
   async function enable(){
     const e=els();
     if(!e.button || e.button.disabled)return;
     try{
       if(!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)){
-        setStatus('не поддерживается · v'+VERSION);
-        alert('Этот браузер не поддерживает push-уведомления. Открой RICH CRAFT через Chrome и добавь на главный экран.');
+        setStatus('не поддерживается');
+        alert('Открой RICH CRAFT через Chrome и добавь на главный экран.');
         return;
       }
       const token=localStorage.getItem(TOKEN_KEY)||'';
       if(!token){
-        setStatus('сначала подключи облачный журнал · v'+VERSION);
+        setStatus('сначала подключи облачный журнал');
         alert('Сначала нажми на строку облачного журнала сверху и подключи RICH CRAFT.');
         return;
       }
 
-      setStatus('проверяю разрешение… · v'+VERSION,false,true);
+      setStatus('проверяю разрешение…',false,true);
       let permission=Notification.permission;
-      if(permission==='default')permission=await timeout(Notification.requestPermission(),12000,'permission_timeout');
+      if(permission==='default'){
+        try{permission=await Notification.requestPermission();}
+        catch{permission='default';}
+      }
+      if(permission==='denied'){
+        setStatus('уведомления запрещены в Android');
+        alert('В Android открой Настройки → Приложения → Chrome (или RICH CRAFT) → Уведомления и разреши их. Затем вернись сюда.');
+        return;
+      }
       if(permission!=='granted'){
-        setStatus((permission==='denied'?'уведомления запрещены в Android':'разрешение не дано')+' · v'+VERSION);
-        alert('Нужно разрешить уведомления для RICH CRAFT в настройках телефона.');
+        showSiteSettingsHelp();
         return;
       }
 
+      setStatus('готовлю уведомления…',false,true);
       const reg=await readyWorker();
-      setStatus('создаю push-подписку… · v'+VERSION,false,true);
-      let sub=await timeout(reg.pushManager.getSubscription(),6000,'push_get_subscription_timeout');
-      if(!sub){
-        sub=await timeout(reg.pushManager.subscribe({
-          userVisibleOnly:true,
-          applicationServerKey:b64ToUint8Array(PUBLIC_KEY)
-        }),15000,'push_subscribe_timeout');
-      }
-
-      setStatus('сохраняю подписку… · v'+VERSION,false,true);
-      await syncSub(sub);
-      setStatus('каждый день в 15:00 · v'+VERSION,true);
-      await reg.showNotification('RICH CRAFT',{
-        body:'Напоминание на 15:00 включено.',
-        icon:'./icon-192.png',
-        badge:'./icon-192.png',
-        tag:'rich-craft-push-enabled'
-      });
+      await finishSubscribe(reg);
     }catch(err){
       console.error('RICH PUSH ERROR',err);
       const code=String(err?.message||err);
-      if(code.includes('permission_timeout'))setStatus('Android не открыл запрос разрешения · v'+VERSION);
-      else if(code.includes('service_worker'))setStatus('ошибка службы уведомлений · v'+VERSION);
-      else if(code.includes('push_get_subscription'))setStatus('ошибка проверки подписки · v'+VERSION);
-      else if(code.includes('push_subscribe'))setStatus('Android не создал push-подписку · v'+VERSION);
-      else if(code.includes('subscribe_failed')||code.includes('subscribe_timeout'))setStatus('сервер не принял подписку · v'+VERSION);
-      else if(code.includes('missing_cloud'))setStatus('нет ключа облачного журнала · v'+VERSION);
-      else setStatus('ошибка: '+code.slice(0,42)+' · v'+VERSION);
-      alert('Не получилось включить уведомления. Пришли папе текст под «НАПОМИНАНИЕ · 15:00».');
+      if(code.includes('service_worker'))setStatus('ошибка службы уведомлений');
+      else if(code.includes('push_get_subscription'))setStatus('ошибка проверки подписки');
+      else if(code.includes('push_subscribe'))setStatus('Android/Chrome не создал подписку');
+      else if(code.includes('subscribe_failed')||code.includes('subscribe_timeout'))setStatus('сервер не принял подписку');
+      else if(code.includes('missing_cloud'))setStatus('нет ключа облачного журнала');
+      else setStatus('ошибка: '+code.slice(0,42));
+      alert('Не получилось включить уведомления. Посмотри текст под «НАПОМИНАНИЕ · 15:00».');
     }
+  }
+
+  async function watchPermission(){
+    if(!navigator.permissions?.query)return;
+    try{
+      const ps=await navigator.permissions.query({name:'notifications'});
+      ps.onchange=async()=>{
+        if(ps.state==='granted'){
+          try{
+            setStatus('разрешение получено, подключаю…',false,true);
+            const reg=await readyWorker();
+            await finishSubscribe(reg);
+          }catch(err){
+            console.error('Permission watcher subscribe failed',err);
+            setStatus('разрешение есть, подписка не создана');
+          }
+        } else if(ps.state==='denied'){
+          setStatus('уведомления запрещены');
+        } else {
+          setStatus('разреши уведомления для сайта');
+        }
+      };
+    }catch{}
   }
 
   async function init(){
@@ -150,22 +175,24 @@ window.RICH_PUSH = (() => {
     e.card.hidden=false;
     e.button.type='button';
     e.button.onclick=enable;
+    watchPermission();
 
     if(!('Notification' in window) || !('PushManager' in window) || !('serviceWorker' in navigator)){
-      setStatus('не поддерживается · v'+VERSION);
+      setStatus('не поддерживается');
       return;
     }
     if(Notification.permission==='denied'){
-      setStatus('запрещено в настройках телефона · v'+VERSION);
+      setStatus('запрещено в настройках телефона');
       return;
     }
     if(Notification.permission==='granted'){
       try{
-        const sub=await getSub();
-        if(sub){await syncSub(sub);setStatus('каждый день в 15:00 · v'+VERSION,true);return;}
+        const reg=await readyWorker();
+        const sub=await timeout(reg.pushManager.getSubscription(),6000,'push_get_subscription_timeout');
+        if(sub){await syncSub(sub);setStatus('каждый день в 15:00',true);return;}
       }catch(err){console.warn('Push init retry later',err);}
     }
-    setStatus('нажми «ВКЛЮЧИТЬ» · v'+VERSION);
+    setStatus('нажми «ВКЛЮЧИТЬ»');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

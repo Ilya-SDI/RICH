@@ -1,16 +1,16 @@
-const CACHE='rich-craft-v2-5-daily-push-20261019';
+const CACHE='rich-craft-v2-6-push-fix-20261021';
 const ASSETS=[
 './',
 './index.html',
 './styles.css?v=24',
 './notes.css?v=24',
-'./push.css?v=25',
+'./push.css?v=26',
 './app.js?v=22',
 './curriculum.js',
 './cloud.js',
 './grades.js?v=23',
 './notes.js?v=24',
-'./push.js?v=25',
+'./push.js?v=26',
 './manifest.webmanifest',
 './icon-192.png',
 './icon-512.png',
@@ -33,19 +33,12 @@ self.addEventListener('activate',e=>{
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET')return;
   if(e.request.mode==='navigate'){
-    e.respondWith(
-      fetch(e.request,{cache:'no-store'})
-        .catch(()=>caches.match('./index.html'))
-    );
+    e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match('./index.html')));
     return;
   }
   e.respondWith(
     fetch(e.request,{cache:'no-store'})
-      .then(r=>{
-        const copy=r.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,copy));
-        return r;
-      })
+      .then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;})
       .catch(()=>caches.match(e.request))
   );
 });

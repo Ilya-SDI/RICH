@@ -1,4 +1,4 @@
-const CACHE='rich-craft-v2-6-push-fix-20261021';
+const CACHE='rich-craft-v2-7-push-diagnostics-20261021';
 const ASSETS=[
 './',
 './index.html',

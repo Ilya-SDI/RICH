@@ -1,12 +1,12 @@
-const CACHE='rich-craft-v2-9-push-v29-20261021';
+const CACHE='rich-craft-v3-development-20261112';
 const ASSETS=[
 './',
 './index.html',
 './styles.css?v=24',
 './notes.css?v=24',
 './push.css?v=26',
-'./app.js?v=22',
-'./curriculum.js',
+'./app.js?v=30',
+'./curriculum.js?v=30',
 './cloud.js',
 './grades.js?v=23',
 './notes.js?v=24',
